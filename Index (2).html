@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#f4f5f7; --card:#fff; --ink:#1f2937; --mute:#6b7280; --line:#e5e7eb; --pri:#2563eb; --ok:#16a34a; --warn:#d97706; --bad:#dc2626; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Inter','Noto Sans Khmer',sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:#111827; color:#fff; padding:14px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; position:sticky; top:0; z-index:5; }
+  header h1 { font-size:18px; margin:0; flex:1; }
+  input, select, textarea { font:inherit; padding:9px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; width:100%; }
+  header input { width:220px; }
+  button { font:inherit; cursor:pointer; border:0; border-radius:8px; padding:9px 14px; background:var(--pri); color:#fff; font-weight:600; }
+  button.ghost { background:#fff; color:var(--ink); border:1px solid var(--line); }
+  button.sm { padding:5px 10px; font-size:13px; }
+  .wrap { padding:14px 16px; max-width:1200px; margin:auto; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+  .stat { background:var(--card); border-radius:10px; padding:12px 14px; border:1px solid var(--line); }
+  .stat b { display:block; font-size:22px; }
+  .stat span { color:var(--mute); font-size:13px; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .chip { background:#fff; border:1px solid var(--line); color:var(--ink); padding:6px 12px; border-radius:99px; font-size:13px; }
+  .chip.on { background:var(--pri); color:#fff; border-color:var(--pri); }
+  .item { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px; }
+  .top { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .name { font-weight:700; font-size:16px; }
+  .sub { color:var(--mute); font-size:13px; margin-top:2px; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:600; background:#dbeafe; color:#1d4ed8; }
+  .badge.Done { background:#dcfce7; color:#15803d; }
+  .badge.Payment { background:#fef3c7; color:#b45309; }
+  .bar { display:flex; gap:3px; margin:12px 0 8px; }
+  .bar i { flex:1; height:6px; border-radius:3px; background:var(--line); }
+  .bar i.on { background:var(--pri); }
+  .bar.done i.on { background:var(--ok); }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:space-between; }
+  .fu { font-size:13px; font-weight:600; }
+  .fu.over { color:var(--bad); } .fu.today { color:var(--warn); } .fu.ok { color:var(--mute); font-weight:400; }
+  .note { font-size:13px; color:var(--mute); margin-top:6px; white-space:pre-wrap; }
+  .empty { text-align:center; color:var(--mute); padding:40px 0; }
+  dialog { border:0; border-radius:14px; padding:0; width:min(560px,94vw); }
+  dialog::backdrop { background:rgba(0,0,0,.45); }
+  form { padding:18px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  form .full { grid-column:1/-1; }
+  label { font-size:13px; color:var(--mute); display:block; margin-bottom:4px; }
+  .actions { display:flex; gap:8px; justify-content:flex-end; grid-column:1/-1; }
+  #toast { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:#111827; color:#fff; padding:12px 16px; border-radius:10px; font-size:14px; display:none; z-index:20; max-width:92vw; }
+  #toast a { color:#93c5fd; margin-left:10px; font-weight:600; }
+  @media (max-width:520px){ form{grid-template-columns:1fr;} header input{width:100%;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>📋 Customer Tracker</h1>
+  <input id="q" placeholder="ស្វែងរក ឈ្មោះ / ទូរស័ព្ទ / project...">
+  <button onclick="openForm()">+ អតិថិជនថ្មី</button>
+</header>
+
+<div class="wrap">
+  <div class="stats" id="stats"></div>
+  <div class="chips" id="chips"></div>
+  <div id="list"><div class="empty">កំពុងផ្ទុក...</div></div>
+</div>
+
+<div id="toast"></div>
+
+<dialog id="dlg">
+  <form id="f" onsubmit="return submitForm(event)">
+    <input type="hidden" name="ID">
+    <div><label>ឈ្មោះអតិថិជន *</label><input name="Customer" required></div>
+    <div><label>ទូរស័ព្ទ</label><input name="Phone"></div>
+    <div><label>ក្រុមហ៊ុន</label><input name="Company"></div>
+    <div><label>Project</label><input name="Project"></div>
+    <div><label>ចំនួនទឹកប្រាក់ ($)</label><input name="Amount" type="number" step="0.01" min="0"></div>
+    <div><label>Stage</label><select name="Stage"></select></div>
+    <div><label>Payment (Deliver / ABA)</label>
+      <select name="Payment Method"><option value=""></option><option>Deliver</option><option>ABA</option></select></div>
+    <div><label>Date Follow up</label><input name="Follow Up" type="date"></div>
+    <div class="full"><label>កំណត់ចំណាំ</label><textarea name="Notes" rows="3"></textarea></div>
+    <div class="actions">
+      <button type="button" class="ghost" id="delBtn" style="margin-right:auto;color:var(--bad)" onclick="del()">លុប</button>
+      <button type="button" class="ghost" onclick="dlg.close()">បោះបង់</button>
+      <button type="submit" id="saveBtn">រក្សាទុក</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const STAGES = ['Quotation','Contract','Design','Confirm','PO','PPR','Received Project','Delivery','Payment','Done'];
+let DATA = [], FILTER = 'ALL';
+const $ = id => document.getElementById(id);
+const dlg = $('dlg'), form = $('f');
+
+function today() {
+  const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function money(n) { return '$' + (Number(n) || 0).toLocaleString(undefined, {maximumFractionDigits: 2}); }
+
+function load() {
+  google.script.run
+    .withSuccessHandler(d => { DATA = d; render(); })
+    .withFailureHandler(e => alert('Error: ' + e.message))
+    .getAll();
+}
+
+function fuState(c) {
+  if (!c['Follow Up'] || c.Stage === 'Done') return null;
+  const t = today();
+  if (c['Follow Up'] < t) return 'over';
+  if (c['Follow Up'] === t) return 'today';
+  return 'ok';
+}
+
+function render() {
+  const t = today();
+  const active = DATA.filter(c => c.Stage !== 'Done');
+  const due = DATA.filter(c => ['over', 'today'].includes(fuState(c)));
+  const pending = active.reduce((s, c) => s + c.Amount, 0);
+  $('stats').innerHTML = `
+    <div class="stat"><b>${DATA.length}</b><span>អតិថិជនសរុប</span></div>
+    <div class="stat"><b>${active.length}</b><span>កំពុងដំណើរការ</span></div>
+    <div class="stat"><b style="color:var(--bad)">${due.length}</b><span>ត្រូវតាមដានថ្ងៃនេះ / ហួស</span></div>
+    <div class="stat"><b>${money(pending)}</b><span>តម្លៃ project កំពុងដំណើរការ</span></div>`;
+
+  const chips = [['ALL', 'ទាំងអស់', DATA.length], ['DUE', '🔔 ត្រូវតាមដាន', due.length]]
+    .concat(STAGES.map(s => [s, s, DATA.filter(c => c.Stage === s).length]));
+  $('chips').innerHTML = chips.map(([k, l, n]) =>
+    `<button class="chip ${FILTER === k ? 'on' : ''}" onclick="setFilter('${k}')">${l} (${n})</button>`).join('');
+
+  const q = $('q').value.trim().toLowerCase();
+  let rows = DATA.filter(c => {
+    if (FILTER === 'DUE') { if (!['over', 'today'].includes(fuState(c))) return false; }
+    else if (FILTER !== 'ALL' && c.Stage !== FILTER) return false;
+    if (q && !(`${c.Customer} ${c.Phone} ${c.Company} ${c.Project}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  rows.sort((a, b) => (a['Follow Up'] || '9999').localeCompare(b['Follow Up'] || '9999'));
+
+  if (!rows.length) { $('list').innerHTML = '<div class="empty">មិនមានទិន្នន័យ</div>'; return; }
+  $('list').innerHTML = rows.map(c => {
+    const i = STAGES.indexOf(c.Stage);
+    const fs = fuState(c);
+    const fuTxt = c['Follow Up']
+      ? `📅 Follow up: ${esc(c['Follow Up'])}${fs === 'over' ? ' (ហួសកំណត់)' : fs === 'today' ? ' (ថ្ងៃនេះ)' : ''}`
+      : 'មិនទាន់កំណត់ Follow up';
+    const next = i >= 0 && i < STAGES.length - 1 ? STAGES[i + 1] : null;
+    return `<div class="item">
+      <div class="top">
+        <div><div class="name">${esc(c.Customer)}</div>
+          <div class="sub">${esc(c.Company)}${c.Company && c.Phone ? ' · ' : ''}${esc(c.Phone)}</div>
+          <div class="sub">${esc(c.Project)}${c.Amount ? ' · ' + money(c.Amount) : ''}${c['Payment Method'] ? ' · ' + esc(c['Payment Method']) : ''}</div></div>
+        <div><span class="badge ${esc(c.Stage)}">${esc(c.Stage)}</span></div>
+      </div>
+      <div class="bar ${c.Stage === 'Done' ? 'done' : ''}">${STAGES.map((s, k) => `<i class="${k <= i ? 'on' : ''}" title="${s}"></i>`).join('')}</div>
+      <div class="row">
+        <span class="fu ${fs || 'ok'}">${fuTxt}</span>
+        <span>
+          ${next ? `<button class="sm" onclick="advance('${c.ID}')">→ ${next}</button>` : ''}
+          <button class="sm ghost" onclick="makePdf('${c.ID}','Quotation',this)">📄 Quote</button>
+          <button class="sm ghost" onclick="makePdf('${c.ID}','Invoice',this)">🧾 Invoice</button>
+          <button class="sm ghost" onclick="openForm('${c.ID}')">កែប្រែ</button>
+        </span>
+      </div>
+      ${c.Notes ? `<div class="note">${esc(c.Notes)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function setFilter(k) { FILTER = k; render(); }
+$('q').addEventListener('input', render);
+form.elements.Stage.innerHTML = STAGES.map(s => `<option>${s}</option>`).join('');
+
+function openForm(id) {
+  form.reset();
+  const c = id ? DATA.find(x => x.ID === id) : null;
+  $('delBtn').style.display = c ? '' : 'none';
+  if (c) {
+    for (const el of form.elements) if (el.name && c[el.name] !== undefined) el.value = c[el.name];
+  } else {
+    form.elements.Stage.value = STAGES[0];
+  }
+  dlg.showModal();
+}
+
+function collect() {
+  const o = {};
+  for (const el of form.elements) if (el.name) o[el.name] = el.value;
+  o.Amount = Number(o.Amount) || 0;
+  return o;
+}
+
+function busy(on) { $('saveBtn').disabled = on; $('saveBtn').textContent = on ? 'កំពុងរក្សាទុក...' : 'រក្សាទុក'; }
+
+function submitForm(e) {
+  e.preventDefault();
+  busy(true);
+  google.script.run
+    .withSuccessHandler(d => { DATA = d; busy(false); dlg.close(); render(); })
+    .withFailureHandler(err => { busy(false); alert('Error: ' + err.message); })
+    .save(collect());
+  return false;
+}
+
+function advance(id) {
+  const c = { ...DATA.find(x => x.ID === id) };
+  const i = STAGES.indexOf(c.Stage);
+  if (i < 0 || i >= STAGES.length - 1) return;
+  c.Stage = STAGES[i + 1];
+  google.script.run
+    .withSuccessHandler(d => { DATA = d; render(); })
+    .withFailureHandler(err => alert('Error: ' + err.message))
+    .save(c);
+}
+
+function toast(html, ms) {
+  const t = $('toast'); t.innerHTML = html; t.style.display = 'block';
+  clearTimeout(toast.h); if (ms) toast.h = setTimeout(() => t.style.display = 'none', ms);
+}
+
+function makePdf(id, type, btn) {
+  const old = btn.textContent; btn.disabled = true; btn.textContent = '...';
+  toast('កំពុងបង្កើត ' + type + '...');
+  google.script.run
+    .withSuccessHandler(r => {
+      btn.disabled = false; btn.textContent = old;
+      toast(esc(r.no) + ' រួចរាល់ <a href="' + r.pdf + '" target="_blank">បើក PDF</a><a href="' + r.doc + '" target="_blank">កែ Doc</a>', 20000);
+    })
+    .withFailureHandler(err => { btn.disabled = false; btn.textContent = old; toast('Error: ' + esc(err.message), 8000); })
+    .makeDocument(id, type);
+}
+
+function del() {
+  const id = form.elements.ID.value;
+  if (!id || !confirm('លុបអតិថិជននេះមែនទេ?')) return;
+  google.script.run
+    .withSuccessHandler(d => { DATA = d; dlg.close(); render(); })
+    .withFailureHandler(err => alert('Error: ' + err.message))
+    .remove(id);
+}
+
+load();
+</script>
+</body>
+</html>
